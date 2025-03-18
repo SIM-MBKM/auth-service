@@ -35,10 +35,15 @@ return [
         ],
     ],
 
-    'workos' => [
-        'client_id' => env('WORKOS_CLIENT_ID'),
-        'secret' => env('WORKOS_API_KEY'),
-        'redirect_url' => env('WORKOS_REDIRECT_URL'),
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI')
     ],
 
+    'sso-its' => [
+        'client_id' => env('OIDC_CLIENT_ID'),
+        'client_secret' => env('OIDC_CLIENT_SECRET'),
+        'redirect' => env('OIDC_REDIRECT_URI')
+    ]
 ];

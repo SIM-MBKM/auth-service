@@ -13,10 +13,11 @@
         "dptsi/laravel-sso": "^2.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^11.0",
+        "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.12",
         "laravel/tinker": "^2.10.1",
-        "laravel/workos": "^0.1.0",
-        "tightenco/ziggy": "^2.4",
-        "workos/workos-php-laravel": "^4.1"
+        "socialiteproviders/google": "^4.1",
+        "tightenco/ziggy": "^2.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

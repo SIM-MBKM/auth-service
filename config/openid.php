@@ -1,10 +1,11 @@
 <?php
 
 return [
-    'provider' => env('WORKOS_ISSUER', 'https://api.workos.com/oidc'),
-    'client_id' => env('WORKOS_CLIENT_ID'),
-    'client_secret' => env('WORKOS_CLIENT_SECRET'),
-    'redirect_uri' => env('WORKOS_REDIRECT_URI'),
-    'post_logout_redirect_uri' => env('WORKOS_LOGOUT_REDIRECT_URI'),
-    'scope' => 'openid email profile',
+    'provider'                  => env('OPENID_PROVIDER'),
+    'client_id'                 => env('OPENID_CLIENT_ID'),
+    'client_secret'             => env('OPENID_CLIENT_SECRET'),
+    'redirect_uri'              => env('OPENID_REDIRECT_URI'),
+    'post_logout_redirect_uri'  => env('OPENID_POST_LOGOUT_REDIRECT_URI'),
+    'post_logout_redirect_uri'  => env('WORKOS_LOGOUT_REDIRECT_URI'),
+    'scope'                     => env('OPENID_SCOPE')
 ];
