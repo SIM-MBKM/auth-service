@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "dptsi/laravel-sso": "^2.2",
+        "firebase/php-jwt": "^6.11",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",

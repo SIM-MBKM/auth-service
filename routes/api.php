@@ -1,26 +1,21 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Laravel\Socialite\Facades\Socialite;
+use App\Controllers\AuthController;
 
-Route::get('/auth/redirect', function () {
-    $url = Socialite::driver('google')->redirect()->getTargetUrl();
+// Social Authentication (Google)
+Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 
-    return response()->json(['url' => $url]);
-});
+// API Key Management
+Route::post('/auth/access-keys', [AuthController::class, 'generateAccessKey']);
+Route::get('/auth/access-keys', [AuthController::class, 'listAccessKeys']);
+Route::post('/auth/access-keys/authenticate', [AuthController::class, 'authenticateWithKey']);
+Route::delete('/auth/access-keys/{keyId}', [AuthController::class, 'revokeAccessKey']);
 
-Route::get('/auth/callback', function (Request $request) {
-    $driver = Socialite::driver('google');
-    $user = $driver->stateless()->user();
+// JWT Token Actions
+Route::post('/auth/refresh', [AuthController::class, 'refreshToken']);
+Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    // $authUser = \App\Models\User::updateOrCreate([
-    //     'email' => $user->getEmail(),
-    // ], [
-    //     'name' => $user->getName(),
-    //     'google_id' => $user->getId(),
-    //     'avatar' => $user->getAvatar(),
-    // ]);
-
-    return response()->json($user);
-});
+// Get current user details
+Route::get('/auth/user', [AuthController::class, 'getUser']);
