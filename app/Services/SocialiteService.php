@@ -2,13 +2,105 @@
 
 namespace App\Services;
 
-use Laravel\Socialite\SocialiteManager;
-use Laravel\Socialite\Facades\Socialite;
+use App\DTOs\UserDTO;
+use App\Models\User;
+use App\Repositories\UserIdentityRepository;
+use App\Repositories\UserRepository;
+use Illuminate\Support\Facades\Log;
+use Laravel\Socialite\Contracts\User as SocialiteUser;
+use RuntimeException;
 
+class SocialiteService
+{
+    public function __construct(
+        private UserRepository $userRepository,
+        private UserIdentityRepository $userIdentityRepository
+    ) {
+        $this->userRepository = $userRepository;
+        $this->userIdentityRepository = $userIdentityRepository;
+    }
 
-// class SocialiteService
-// {
-//     protected $googleDriver;
+    public function handleSocialLogin(string $provider, SocialiteUser $socialUser): User
+    {
+        try {
+            $identity = $this->userIdentityRepository->findOrNewIdentity($provider, $socialUser->getId());
 
-//     public
-// }
+            if (!$identity->exists) {
+                $user = $this->findOrCreateUser($socialUser);
+                $identity->user_id = $user->id;
+                $identity->provider_data = $this->formatProviderData($socialUser);
+            } else {
+                $user = $identity->user;
+                $identity->provider_data = $this->formatProviderData($socialUser);
+            }
+
+            $this->updateIdentityTokens(
+                $identity,
+                $socialUser->token,
+                $socialUser->refreshToken,
+                $socialUser->expiresIn
+            );
+
+            return $user;
+        } catch (\Exception $e) {
+            Log::error("Social login failed for {$provider}: " . $e->getMessage(), [
+                'provider' => $provider,
+                'social_id' => $socialUser->getId(),
+                'error' => $e
+            ]);
+            throw new RuntimeException('Social authentication failed', 401, $e);
+        }
+    }
+
+    private function findOrCreateUser(SocialiteUser $socialUser): User
+    {
+        try {
+            $user = $this->userRepository->findByEmail($socialUser->getEmail());
+
+            return $user ?? $this->createUserFromSocial($socialUser);
+        } catch (\Exception $e) {
+            Log::error('User lookup/creation failed: ' . $e->getMessage());
+            throw new RuntimeException('Failed to process user account', 500, $e);
+        }
+    }
+
+    private function createUserFromSocial(SocialiteUser $socialUser): User
+    {
+        try {
+            $dto = UserDTO::fromSocialite($socialUser);
+            return $this->userRepository->createUser($dto);
+        } catch (\Exception $e) {
+            Log::error('User creation failed: ' . $e->getMessage());
+            throw new RuntimeException('Failed to create user account', 500, $e);
+        }
+    }
+
+    private function updateIdentityTokens($identity, string $token, ?string $refreshToken, ?int $expiresIn): void
+    {
+        try {
+            $this->userIdentityRepository->updateIdentityTokens(
+                $identity,
+                $token,
+                $refreshToken,
+                $expiresIn
+            );
+        } catch (\Exception $e) {
+            Log::error('Identity token update failed: ' . $e->getMessage());
+            throw new RuntimeException('Failed to update authentication tokens', 500, $e);
+        }
+    }
+
+    private function formatProviderData(SocialiteUser $socialUser): array
+    {
+        try {
+            return [
+                'name' => $socialUser->getName(),
+                'email' => $socialUser->getEmail(),
+                'avatar' => $socialUser->getAvatar(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Provider data formatting failed: ' . $e->getMessage());
+            throw new RuntimeException('Invalid social provider data', 400, $e);
+        }
+    }
+}

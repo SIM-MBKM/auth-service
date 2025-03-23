@@ -2,23 +2,40 @@
 
 namespace App\Controllers;
 
+use App\DTOs\AccessKeyCreateDTO;
+use App\DTOs\UserDTO;
 use App\Models\User;
 use App\Models\UserIdentity;
 use App\Models\AccessKey;
-use App\Services\AuthService;
+use App\Repositories\UserRepository;
+use App\Services\AccessKeyService;
+use App\Services\AccessTokenService;
+use App\Services\SocialiteService;
+use Exception;
 use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    protected $authService;
-    
-    public function __construct(AuthService $authService)
-    {
-        $this->authService = $authService;
+    protected $accessTokenService;
+    protected $accessKeyService;
+    protected $userRepository;
+    protected $socialiteService;
+
+    public function __construct(
+        AccessTokenService $accessTokenService,
+        AccessKeyService $accessKeyService,
+        SocialiteService $socialiteService,
+        UserRepository $userRepository
+    ) {
+        $this->accessTokenService = $accessTokenService;
+        $this->accessKeyService = $accessKeyService;
+        $this->socialiteService = $socialiteService;
+        $this->userRepository = $userRepository;
     }
-    
+
     /**
      * Redirect to Google
      */
@@ -26,7 +43,7 @@ class AuthController extends Controller
     {
         return Socialite::driver('google')->redirect();
     }
-    
+
     /**
      * Handle Google callback
      */
@@ -34,285 +51,234 @@ class AuthController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
+            $user = $this->socialiteService->handleSocialLogin('google', $googleUser);
 
-            // Find or create user identity
-            $userIdentity = UserIdentity::firstOrNew([
-                'provider' => 'google',
-                'provider_user_id' => $googleUser->getId(),
-            ]);
-            
-            if (!$userIdentity->exists) {
-                // Check if user already exists with this email
-                $user = User::where('email', $googleUser->getEmail())->first();
-                
-                if (!$user) {
-                    // Create new user
-                    $user = User::create([
-                        'email' => $googleUser->getEmail(),
-                        'name' => $googleUser->getName(),
-                        'role' => 'user',
-                    ]);
-                }
-                
-                // Create new identity
-                $userIdentity->user_id = $user->id;
-                $userIdentity->provider_data = json_encode([
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'avatar' => $googleUser->getAvatar(),
-                ]);
-            } else {
-                $user = User::find($userIdentity->user_id);
-                
-                // Update identity data
-                $userIdentity->provider_data = json_encode([
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'avatar' => $googleUser->getAvatar(),
-                ]);
-            }
-            
-            // Update tokens
-            $userIdentity->access_token = $googleUser->token;
-            $userIdentity->refresh_token = $googleUser->refreshToken ?? null;
-            $userIdentity->expires_at = $googleUser->expiresIn ? now()->addSeconds($googleUser->expiresIn) : null;
-            $userIdentity->save();
-            
-            Log::info("halo", $userIdentity);
-            // Log successful login
-            $this->authService->logLogin($user->id, $request, 'google', true);
-            
-            // Generate JWT
-            $token = $this->authService->generateToken($user, $request);
-            
+            $this->accessTokenService->logLogin($user->id, $request, 'google', true);
+            $token = $this->accessTokenService->generateToken($user, $request);
+
             return response()->json([
                 'access_token' => $token,
                 'token_type' => 'bearer',
                 'user' => $user
             ]);
-            
+        } catch (\RuntimeException $e) {
+            $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
+            Log::warning("Google auth error: {$e->getMessage()}");
+            return response()->json(['error' => $e->getMessage()], 400);
         } catch (\Exception $e) {
-            Log::error('Google authentication failed: ' . $e->getMessage());
-            
-            // Log the error
-            $this->authService->logLogin(null, $request, 'google', false, $e->getMessage());
-            
-            return response()->json([
-                'error' => 'Authentication failed',
-                'message' => $e->getMessage()
-            ], 401);
+            $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
+            Log::error("Google auth failed: {$e->getMessage()}");
+            return response()->json(['error' => 'Authentication failed'], 500);
         }
     }
-    
+
     /**
-     * Generate API key for a user
+     * Generate API key
      */
     public function generateAccessKey(Request $request)
     {
-        $request->validate([
-            'description' => 'required|string|max:255',
-            'expires_at' => 'nullable|date|after:now',
-            'scopes' => 'nullable|array',
-        ]);
-        
-        $user = $this->authService->getUserFromToken($request->bearerToken());
-        
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
+            if (!$user) {
+                $this->accessTokenService->logLogin(null, $request, 'api_key', false, 'Invalid credentials');
+                throw new \RuntimeException('Unauthorized', 401);
+            }
+
+            $dto = AccessKeyCreateDTO::fromRequest($request);
+            $payload = $this->accessKeyService->createAccessKey($dto, $user->id);
+
+            return response()->json([
+                'access_key' => $payload['plain_text_key'],
+                'details' => $payload['details']
+            ], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation Error',
+                'messages' => $e->errors()
+            ], 422);
+        } catch (\RuntimeException $e) {
+            $this->accessTokenService->logLogin(null, $request, 'api_key', false, $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'api_key', false, $e->getMessage());
+            Log::error("Key generation error: {$e->getMessage()}");
+            return response()->json(['error' => 'Key generation failed'], 500);
         }
-        
-        // Generate a secure random key
-        $plainTextKey = bin2hex(random_bytes(24));  
-        
-        // Store hashed version in database
-        $accessKey = new AccessKey();
-        $accessKey->user_id = $user->id;
-        $accessKey->key_hash = hash('sha256', $plainTextKey);
-        $accessKey->description = $request->description;
-        $accessKey->expires_at = $request->expires_at;
-        $accessKey->scopes = json_encode($request->scopes ?? []);
-        $accessKey->last_used_at = null;
-        $accessKey->is_active = true;
-        $accessKey->save();
-        
-        // Return the plain text key - it won't be retrievable after this
-        return response()->json([
-            'access_key' => $plainTextKey,
-            'key_id' => $accessKey->id,
-            'description' => $accessKey->description,
-            'expires_at' => $accessKey->expires_at,
-            'scopes' => json_decode($accessKey->scopes),
-            'created_at' => $accessKey->created_at
-        ]);
     }
-    
+
     /**
-     * List all access keys for the current user
+     * List access keys
      */
     public function listAccessKeys(Request $request)
     {
-        $user = $this->authService->getUserFromToken($request->bearerToken());
-        
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
+            if (!$user) {
+                $this->accessTokenService->logLogin(null, $request, 'api_key', false, 'Unauthorized');
+                throw new \RuntimeException('Unauthorized', 401);
+            }
+
+            $keys = $this->accessKeyService->listUserKeys($user->id);
+
+            return response()->json([
+                'access_keys' => $keys->map(fn($key) => [
+                    'id' => $key->id,
+                    'description' => $key->description,
+                    'scopes' => $key->scopes,
+                    'expires_at' => $key->expires_at,
+                    'last_used_at' => $key->last_used_at,
+                    'is_active' => $key->is_active,
+                    'updated_at' => $key->updated_at
+                ])
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'api_key', false, $e->getMessage());
+            Log::error("List keys error: {$e->getMessage()}");
+            return response()->json(['error' => 'Failed to list keys'], 500);
         }
-        
-        $keys = AccessKey::where('user_id', $user->id)
-            ->select('id', 'description', 'expires_at', 'scopes', 'last_used_at', 'is_active', 'created_at', 'updated_at')
-            ->get();
-            
-        return response()->json([
-            'access_keys' => $keys->map(function($key) {
-                $key->scopes = json_decode($key->scopes);
-                return $key;
-            })
-        ]);
     }
-    
+
     /**
      * Authenticate with access key
      */
     public function authenticateWithKey(Request $request)
     {
-        $accessKeyHeader = $request->header('X-API-Key');
-        if (!$accessKeyHeader) {
-            return response()->json(['error' => 'API key required'], 401);
+        try {
+            $user = $this->accessKeyService->authenticateKey($request);
+            if (!$user) {
+                $this->accessTokenService->logLogin(null, $request, 'access_key', false, 'Invalid key');
+                throw new \RuntimeException('Invalid API key', 401);
+            }
+
+            $this->accessTokenService->logLogin($user->id, $request, 'access_key', true);
+            $token = $this->accessTokenService->generateToken($user, $request);
+
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'user' => $user
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'access_key', false, $e->getMessage());
+            Log::error("Key auth error: {$e->getMessage()}");
+            return response()->json(['error' => 'Authentication failed'], 500);
         }
-        
-        $keyHash = hash('sha256', $accessKeyHeader);
-        $accessKey = AccessKey::where('key_hash', $keyHash)
-            ->where('is_active', true)
-            ->where(function($query) {
-                $query->whereNull('expires_at')
-                    ->orWhere('expires_at', '>', now());
-            })
-            ->first();
-            
-        if (!$accessKey) {
-            $this->authService->logLogin(null, $request, 'access_key', false, 'Invalid API key');
-            return response()->json(['error' => 'Invalid or expired API key'], 401);
-        }
-        
-        // Update last used timestamp
-        $accessKey->last_used_at = now();
-        $accessKey->save();
-        
-        // Get the user associated with this key
-        $user = User::find($accessKey->user_id);
-        
-        if (!$user) {
-            $this->authService->logLogin(null, $request, 'access_key', false, 'User not found');
-            return response()->json(['error' => 'User not found'], 401);
-        }
-        
-        // Log successful login
-        $this->authService->logLogin($user->id, $request, 'access_key', true);
-        
-        // Generate JWT for this user
-        $token = $this->authService->generateToken($user, $request);
-        
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'user' => $user,
-            'scopes' => json_decode($accessKey->scopes),
-        ]);
     }
-    
+
     /**
      * Revoke API key
      */
     public function revokeAccessKey(Request $request, $keyId)
     {
-        $user = $this->authService->getUserFromToken($request->bearerToken());
-        
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
+            if (!$user) {
+                $this->accessTokenService->logLogin(null, $request, 'api_key', false, 'Unauthorized');
+                throw new \RuntimeException('Unauthorized', 401);
+            }
+
+            $result = $this->accessKeyService->revokeKey($keyId, $user->id);
+            if (!$result) {
+                throw new \RuntimeException('Key not found', 404);
+            }
+
+            return response()->json(['message' => 'Key revoked']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'api_key', false, $e->getMessage());
+            Log::error("Revoke key error: {$e->getMessage()}");
+            return response()->json(['error' => 'Revocation failed'], 500);
         }
-        
-        $accessKey = AccessKey::where('id', $keyId)
-            ->where('user_id', $user->id)
-            ->first();
-            
-        if (!$accessKey) {
-            return response()->json(['error' => 'Key not found'], 404);
-        }
-        
-        $accessKey->is_active = false;
-        $accessKey->save();
-        
-        return response()->json(['message' => 'Key revoked successfully']);
     }
-    
+
     /**
-     * Logout (revoke token)
+     * Logout
      */
     public function logout(Request $request)
     {
-        $token = $request->bearerToken();
-        
-        if (!$token) {
-            return response()->json(['error' => 'No token provided'], 400);
-        }
-        
-        $success = $this->authService->deleteToken($token);
-        
-        if ($success) {
-            return response()->json(['message' => 'Logged out successfully']);
-        } else {
+        try {
+            $token = $request->bearerToken();
+            if (!$token) {
+                throw new \RuntimeException('No token provided', 400);
+            }
+
+            $success = $this->accessTokenService->deleteToken($token);
+            if (!$success) {
+                throw new \RuntimeException('Token not found', 404);
+            }
+
+            return response()->json(['message' => 'Logged out']);
+        } catch (\RuntimeException $e) {
+            $this->accessTokenService->logLogin(null, $request, 'logout', false, $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'logout', false, $e->getMessage());
+            Log::error("Logout error: {$e->getMessage()}");
             return response()->json(['error' => 'Logout failed'], 500);
         }
     }
-    
+
     /**
      * Get current user
      */
     public function getUser(Request $request)
     {
-        $user = $this->authService->getUserFromToken($request->bearerToken());
-        
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
+            if (!$user) {
+                $this->accessTokenService->logLogin(null, $request, 'api_key', false, 'Unauthorized');
+                throw new \RuntimeException('Unauthorized', 401);
+            }
+
+            return response()->json([
+                'user' => $user,
+                'identities' => $this->accessTokenService->getIdentities($user->id)
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'api_key', false, $e->getMessage());
+            Log::error("Get user error: {$e->getMessage()}");
+            return response()->json(['error' => 'Failed to retrieve user'], 500);
         }
-        
-        // Get connected identities
-        $identities = UserIdentity::where('user_id', $user->id)
-            ->select('provider', 'provider_user_id', 'updated_at')
-            ->get();
-        
-        return response()->json([
-            'user' => $user,
-            'identities' => $identities
-        ]);
     }
-    
+
     /**
      * Refresh token
      */
     public function refreshToken(Request $request)
     {
-        $token = $request->bearerToken();
-        
-        if (!$token) {
-            return response()->json(['error' => 'No token provided'], 400);
+        try {
+            $token = $request->bearerToken();
+            if (!$token) {
+                throw new \RuntimeException('No token provided', 400);
+            }
+
+            $user = $this->accessTokenService->getUserFromToken($token);
+            if (!$user) {
+                $this->accessTokenService->logLogin(null, $request, 'refresh_token', false, 'Invalid token');
+                throw new \RuntimeException('Invalid token', 401);
+            }
+
+            $this->accessTokenService->deleteToken($token);
+            $newToken = $this->accessTokenService->generateToken($user, $request);
+
+            return response()->json([
+                'access_token' => $newToken,
+                'token_type' => 'bearer',
+                'user' => $user
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getCode());
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'refresh_token', false, $e->getMessage());
+            Log::error("Refresh error: {$e->getMessage()}");
+            return response()->json(['error' => 'Token refresh failed'], 500);
         }
-        
-        $user = $this->authService->getUserFromToken($token);
-        
-        if (!$user) {
-            return response()->json(['error' => 'Invalid or expired token'], 401);
-        }
-        
-        // Revoke old token
-        $this->authService->deleteToken($token);
-        
-        // Generate new token
-        $newToken = $this->authService->generateToken($user, $request);
-        
-        return response()->json([
-            'access_token' => $newToken,
-            'token_type' => 'bearer',
-            'user' => $user
-        ]);
     }
 }
