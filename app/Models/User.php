@@ -15,6 +15,18 @@ class User extends Model
     protected $connection = 'auth';
     protected $table = 'users';
 
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->id = (string) \Illuminate\Support\Str::uuid();
+        });
+    }
+
     protected $fillable = [
         'name',
         'email',

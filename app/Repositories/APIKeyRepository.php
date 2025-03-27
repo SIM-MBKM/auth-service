@@ -2,31 +2,31 @@
 
 namespace App\Repositories;
 
-use App\Models\AccessKey;
+use App\Models\APIKey;
 use Illuminate\Database\Eloquent\Collection;
 
-class AccessKeyRepository
+class APIKeyRepository
 {
     public function create(array $data)
     {
-        return AccessKey::create($data);
+        return APIKey::create($data);
     }
 
-    public function update(string $accessKeyId, array $data)
+    public function update(string $apiKeyId, array $data)
     {
-        return AccessKey::where('id', $accessKeyId)->update($data);
+        return APIKey::where('id', $apiKeyId)->update($data);
     }
 
-    public function findUserKey(string $accessKeyId, string $userId): ?AccessKey
+    public function findUserKey(string $apiKeyId, string $userId): ?APIKey
     {
-        return AccessKey::where('id', $accessKeyId)
+        return APIKey::where('id', $apiKeyId)
             ->where('user_id', $userId)
             ->first();
     }
 
     public function findUserKeysByUserId(string $userId): ?Collection
     {
-        return AccessKey::where('user_id', $userId)
+        return APIKey::where('user_id', $userId)
             ->select(
                 'id',
                 'description',
@@ -40,9 +40,9 @@ class AccessKeyRepository
             ->get();
     }
 
-    public function findActiveKeyByKeyHash(string $keyHash): ?AccessKey
+    public function findActiveKeyByKeyHash(string $keyHash): ?APIKey
     {
-        return AccessKey::where('key_hash', $keyHash)
+        return APIKey::where('key_hash', $keyHash)
             ->where('is_active', true)
             ->where(function ($query) {
                 $query->whereNull('expires_at')

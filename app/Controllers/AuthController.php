@@ -2,14 +2,13 @@
 
 namespace App\Controllers;
 
-use App\DTOs\AccessKeyCreateDTO;
+use App\DTOs\APIKeyCreateDTO;
 use App\DTOs\UserDTO;
 use App\Models\User;
 use App\Models\UserIdentity;
-use App\Models\AccessKey;
 use App\Repositories\UserRepository;
-use App\Services\AccessKeyService;
 use App\Services\AccessTokenService;
+use App\Services\APIKeyService;
 use App\Services\SocialiteService;
 use Exception;
 use Illuminate\Http\Request;
@@ -20,18 +19,18 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     protected $accessTokenService;
-    protected $accessKeyService;
+    protected $apiKeyService;
     protected $userRepository;
     protected $socialiteService;
 
     public function __construct(
         AccessTokenService $accessTokenService,
-        AccessKeyService $accessKeyService,
+        APIKeyService $apiKeyService,
         SocialiteService $socialiteService,
         UserRepository $userRepository
     ) {
         $this->accessTokenService = $accessTokenService;
-        $this->accessKeyService = $accessKeyService;
+        $this->apiKeyService = $apiKeyService;
         $this->socialiteService = $socialiteService;
         $this->userRepository = $userRepository;
     }
@@ -73,9 +72,30 @@ class AuthController extends Controller
     }
 
     /**
+     * Validate JWT Token
+     */
+    public function validateToken(Request $request)
+    {
+        try {
+            $user = $this->accessTokenService->getUserFromToken($request->input('token'));
+
+            return response()->json([
+                'success' => true,
+                'data' => $user
+            ]);
+        } catch (\RuntimeException $e) {
+            $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
+            return response()->json(['error' => 'Token validation failed'], 500);
+        }
+    }
+
+    /**
      * Generate API key
      */
-    public function generateAccessKey(Request $request)
+    public function generateAPIKey(Request $request)
     {
         try {
             $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
@@ -84,11 +104,11 @@ class AuthController extends Controller
                 throw new \RuntimeException('Unauthorized', 401);
             }
 
-            $dto = AccessKeyCreateDTO::fromRequest($request);
-            $payload = $this->accessKeyService->createAccessKey($dto, $user->id);
+            $dto = APIKeyCreateDTO::fromRequest($request);
+            $payload = $this->apiKeyService->createAPIKey($dto, $user->id);
 
             return response()->json([
-                'access_key' => $payload['plain_text_key'],
+                'api_key' => $payload['plain_text_key'],
                 'details' => $payload['details']
             ], 201);
         } catch (ValidationException $e) {
@@ -109,7 +129,7 @@ class AuthController extends Controller
     /**
      * List access keys
      */
-    public function listAccessKeys(Request $request)
+    public function listAPIKeys(Request $request)
     {
         try {
             $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
@@ -118,10 +138,10 @@ class AuthController extends Controller
                 throw new \RuntimeException('Unauthorized', 401);
             }
 
-            $keys = $this->accessKeyService->listUserKeys($user->id);
+            $keys = $this->apiKeyService->listUserKeys($user->id);
 
             return response()->json([
-                'access_keys' => $keys->map(fn($key) => [
+                'api_keys' => $keys->map(fn($key) => [
                     'id' => $key->id,
                     'description' => $key->description,
                     'scopes' => $key->scopes,
@@ -146,13 +166,13 @@ class AuthController extends Controller
     public function authenticateWithKey(Request $request)
     {
         try {
-            $user = $this->accessKeyService->authenticateKey($request);
+            $user = $this->apiKeyService->authenticateKey($request);
             if (!$user) {
-                $this->accessTokenService->logLogin(null, $request, 'access_key', false, 'Invalid key');
+                $this->accessTokenService->logLogin(null, $request, 'api_key', false, 'Invalid key');
                 throw new \RuntimeException('Invalid API key', 401);
             }
 
-            $this->accessTokenService->logLogin($user->id, $request, 'access_key', true);
+            $this->accessTokenService->logLogin($user->id, $request, 'api_key', true);
             $token = $this->accessTokenService->generateToken($user, $request);
 
             return response()->json([
@@ -163,7 +183,7 @@ class AuthController extends Controller
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], $e->getCode());
         } catch (\Exception $e) {
-            $this->accessTokenService->logLogin(null, $request, 'access_key', false, $e->getMessage());
+            $this->accessTokenService->logLogin(null, $request, 'api_key', false, $e->getMessage());
             Log::error("Key auth error: {$e->getMessage()}");
             return response()->json(['error' => 'Authentication failed'], 500);
         }
@@ -172,7 +192,7 @@ class AuthController extends Controller
     /**
      * Revoke API key
      */
-    public function revokeAccessKey(Request $request, $keyId)
+    public function revokeAPIKey(Request $request, $keyId)
     {
         try {
             $user = $this->accessTokenService->getUserFromToken($request->bearerToken());
@@ -181,7 +201,7 @@ class AuthController extends Controller
                 throw new \RuntimeException('Unauthorized', 401);
             }
 
-            $result = $this->accessKeyService->revokeKey($keyId, $user->id);
+            $result = $this->apiKeyService->revokeKey($keyId, $user->id);
             if (!$result) {
                 throw new \RuntimeException('Key not found', 404);
             }

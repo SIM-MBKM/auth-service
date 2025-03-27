@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "08a758992340106eba964ef01f05a036",
+    "content-hash": "85959554108f9a2c16c84ebe5fac5160",
     "packages": [
         {
             "name": "brick/math",
@@ -3835,6 +3835,59 @@
                 }
             ],
             "time": "2024-04-27T21:32:50+00:00"
+        },
+        {
+            "name": "sim-mbkm/mod-service",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/SIM-MBKM/mod-service-laravel.git",
+                "reference": "dce5baa57ec2fefa9717f826cdf8278a149cce20"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/SIM-MBKM/mod-service-laravel/zipball/dce5baa57ec2fefa9717f826cdf8278a149cce20",
+                "reference": "dce5baa57ec2fefa9717f826cdf8278a149cce20",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0",
+                "illuminate/support": "^8.0|^9.0|^10.0|^11.0|^12.0",
+                "php": "^7.3|^8.0|^8.1|^8.2|^8.3"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^6.0|^7.0|^8.0|^9.0|^10.0",
+                "phpunit/phpunit": "^9.0|^10.0|^11.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SIMMBKM\\ModService\\SrcServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SIMMBKM\\ModService\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dimas Fadilah",
+                    "email": "dimasfadilah20@gmail.com"
+                }
+            ],
+            "description": "Laravel service integration package",
+            "support": {
+                "issues": "https://github.com/SIM-MBKM/mod-service-laravel/issues",
+                "source": "https://github.com/SIM-MBKM/mod-service-laravel/tree/v1.0.0"
+            },
+            "time": "2025-03-24T09:49:53+00:00"
         },
         {
             "name": "socialiteproviders/google",
@@ -8800,12 +8853,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": [],
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "plugin-api-version": "2.6.0"
 }

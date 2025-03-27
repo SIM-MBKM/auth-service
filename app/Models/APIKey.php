@@ -6,15 +6,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class AccessKey extends Model
+class APIKey extends Model
 {
     use HasUuids;
 
     protected $connection = 'auth';
-    protected $table = 'access_keys';
+    protected $table = 'api_keys';
+
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->id = (string) \Illuminate\Support\Str::uuid();
+        });
+    }
 
     protected $fillable = [
-        'id',
         'user_id',
         'key_hash',
         'description',

@@ -17,6 +17,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.12",
         "laravel/tinker": "^2.10.1",
+        "sim-mbkm/mod-service": "^1.0",
         "socialiteproviders/google": "^4.1",
         "tightenco/ziggy": "^2.4"
     },

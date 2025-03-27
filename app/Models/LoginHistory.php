@@ -12,8 +12,19 @@ class LoginHistory extends Model
     protected $connection = 'auth';
     protected $table = 'login_histories';
 
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->id = (string) \Illuminate\Support\Str::uuid();
+        });
+    }
+
     protected $fillable = [
-        'id',
         'user_id',
         'auth_method',
         'ip_address',

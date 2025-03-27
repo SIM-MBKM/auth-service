@@ -12,7 +12,19 @@ class UserIdentity extends Model
     protected $connection = 'auth';
     protected $table = 'user_identities';
 
-     protected $fillable = [
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->id = (string) \Illuminate\Support\Str::uuid();
+        });
+    }
+
+    protected $fillable = [
         'user_id',
         'provider',
         'provider_user_id',

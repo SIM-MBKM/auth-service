@@ -14,7 +14,6 @@ class Session extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id',
         'user_id',
         'token_hash',
         'payload',

@@ -112,6 +112,21 @@ return [
             'sslmode' => 'prefer',
         ],
 
+        'user_management' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_URL_USER_MANAGEMENT_SERVICE'),
+            'host' => env('DB_HOST_USER_MANAGEMENT_SERVICE', '127.0.0.1'),
+            'port' => env('DB_PORT_USER_MANAGEMENT_SERVICE', '5432'),
+            'database' => env('DB_DATABASE_USER_MANAGEMENT_SERVICE', 'laravel'),
+            'username' => env('DB_USERNAME_USER_MANAGEMENT_SERVICE', 'root'),
+            'password' => env('DB_PASSWORD_USER_MANAGEMENT_SERVICE', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

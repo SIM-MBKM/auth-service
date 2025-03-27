@@ -4,7 +4,7 @@ namespace App\DTOs;
 
 use Illuminate\Http\Request;;
 
-class AccessKeyCreateDTO
+class APIKeyCreateDTO
 {
     public function __construct(
         public readonly string $description,
