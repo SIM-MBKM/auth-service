@@ -13,12 +13,11 @@ class UserRepository
             'name' => $dto->name,
             'email' => $dto->email,
             'sso_id' => $dto->sso_id,
-            'role' => $dto->role,
             'no_wa' => $dto->no_wa
         ]);
     }
 
-    public function findByEmail(string $email): User
+    public function findByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
     }

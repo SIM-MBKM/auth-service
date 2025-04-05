@@ -46,5 +46,14 @@ return [
         'client_id' => env('OIDC_CLIENT_ID'),
         'client_secret' => env('OIDC_CLIENT_SECRET'),
         'redirect' => env('OIDC_REDIRECT_URI')
-    ]
+    ],
+
+    'auth_service' => [
+        'base_uri' => env('AUTH_SERVICE_URL'),
+        'timeout' => 15,
+    ],
+    'user_management_service' => [
+        'base_uri' => env('USER_MANAGEMENT_URL'),
+        'timeout' => 15,
+    ],
 ];

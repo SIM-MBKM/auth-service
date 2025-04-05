@@ -31,7 +31,6 @@ class User extends Model
         'name',
         'email',
         'sso_id',
-        'role',
         'no_wa',
     ];
 

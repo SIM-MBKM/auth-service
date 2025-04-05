@@ -8,16 +8,19 @@ use App\Repositories\UserIdentityRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
+use App\Services\QueueService;
 use RuntimeException;
 
 class SocialiteService
 {
     public function __construct(
         private UserRepository $userRepository,
-        private UserIdentityRepository $userIdentityRepository
+        private UserIdentityRepository $userIdentityRepository,
+        private QueueService $queueService
     ) {
         $this->userRepository = $userRepository;
         $this->userIdentityRepository = $userIdentityRepository;
+        $this->queueService = $queueService;
     }
 
     public function handleSocialLogin(string $provider, SocialiteUser $socialUser): User
@@ -52,6 +55,39 @@ class SocialiteService
         }
     }
 
+    // public function handleSocialLogin(string $provider, SocialiteUser $socialUser): User
+    // {
+    //     Log::info("[1] Social login started", ['provider' => $provider]);
+
+    //     try {
+    //         Log::info("[2] Searching identity", [
+    //             'provider' => $provider,
+    //             'social_id' => $socialUser->getId()
+    //         ]);
+
+    //         $identity = $this->userIdentityRepository->findOrNewIdentity($provider, $socialUser->getId());
+    //         dd($identity);
+    //         if (!$identity->exists) {
+    //             Log::info("[3] New identity detected");
+    //             $user = $this->findOrCreateUser($socialUser);
+    //             $identity->user_id = $user->id;
+    //             $identity->provider_data = $this->formatProviderData($socialUser);
+    //         } else {
+    //             Log::info("[4] Existing identity found");
+    //             $user = $identity->user;
+    //             $identity->provider_data = $this->formatProviderData($socialUser);
+    //         }
+
+    //         Log::info("[5] Saving identity");
+    //         $identity->save();
+
+    //         return $user;
+    //     } catch (\Exception $e) {
+    //         Log::error("[ERROR] Social login failed", ['error' => $e->getMessage()]);
+    //         throw $e;
+    //     }
+    // }
+
     private function findOrCreateUser(SocialiteUser $socialUser): User
     {
         try {
@@ -68,7 +104,19 @@ class SocialiteService
     {
         try {
             $dto = UserDTO::fromSocialite($socialUser);
-            return $this->userRepository->createUser($dto);
+            $user = $this->userRepository->createUser($dto);
+
+            // Publish Event User Creation
+            Log::info("is this running?");
+            $this->queueService->publishUserEvent('created', [
+                'auth_user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email
+            ]);
+
+
+            Log::info("is this running return?");
+            return $user;
         } catch (\Exception $e) {
             Log::error('User creation failed: ' . $e->getMessage());
             throw new RuntimeException('Failed to create user account', 500, $e);

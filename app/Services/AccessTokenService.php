@@ -45,7 +45,6 @@ class AccessTokenService
                 'sub' => [
                     'id' => $user->id,
                     'email' => $user->email,
-                    'role' => $user->role,
                 ],
                 'iat' => time(),
                 'exp' => time() + $this->jwtExpiry
@@ -111,7 +110,6 @@ class AccessTokenService
             $payload = [
                 'user_id' => $user->id,
                 'email' => $user->email,
-                'role' => $user->role,
                 'jwt_token' => $token,
                 'jwt_token_hash' => $tokenHash,
             ];
@@ -126,6 +124,7 @@ class AccessTokenService
     public function validateToken($token)
     {
         try {
+            // dd($token)
             $tokenHash = hash('sha256', $token);
             $user = $this->userRepository->findByRememberToken($tokenHash);
 
@@ -159,6 +158,7 @@ class AccessTokenService
     {
         try {
             $credentials = $this->validateToken($token);
+
             if (!$credentials || !isset($credentials->sub->email)) {
                 return null;
             }
