@@ -106,16 +106,10 @@ class SocialiteService
             $dto = UserDTO::fromSocialite($socialUser);
             $user = $this->userRepository->createUser($dto);
 
-            // Publish Event User Creation
-            Log::info("is this running?");
             $this->queueService->publishUserEvent('created', [
                 'auth_user_id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email
             ]);
 
-
-            Log::info("is this running return?");
             return $user;
         } catch (\Exception $e) {
             Log::error('User creation failed: ' . $e->getMessage());

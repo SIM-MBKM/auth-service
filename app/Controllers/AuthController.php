@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Repositories\UserRepository;
 use App\Services\AccessTokenService;
 use App\Services\SocialiteService;
+use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
@@ -50,7 +51,7 @@ class AuthController
             return response()->json([
                 'access_token' => $token,
                 'token_type' => 'bearer',
-                'user' => $user
+                'user' => collect($user)->merge(['user_id' => $user->id])
             ]);
         } catch (\RuntimeException $e) {
             $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
@@ -84,7 +85,7 @@ class AuthController
 
             return response()->json([
                 'success' => true,
-                'data' => $user
+                'data' => collect($user)->merge(['user_id' => $user->id])
             ]);
         } catch (\RuntimeException $e) {
             $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
