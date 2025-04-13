@@ -83,16 +83,31 @@ class AuthController
             $user = $this->accessTokenService->getUserFromToken($token);
             Log::info($user);
 
+            // Format response to match what ServiceException expects
             return response()->json([
-                'success' => true,
+                'status' => 'success',
                 'data' => collect($user)->merge(['user_id' => $user->id])
             ]);
         } catch (\RuntimeException $e) {
             $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 400);
+
+            // Format error response to match what ServiceException expects
+            return response()->json([
+                'status' => 'error',
+                'code' => $e->getCode() ?: 400,
+                'message' => $e->getMessage(),
+                'errors' => (object) ['message' => [$e->getMessage()]]
+            ], $e->getCode() ?: 400);
         } catch (\Exception $e) {
             $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
-            return response()->json(['error' => 'Token validation failed'], 500);
+
+            // Format error response to match what ServiceException expects
+            return response()->json([
+                'status' => 'error',
+                'code' => 500,
+                'message' => 'Token validation failed',
+                'errors' => (object) ['message' => ['Token validation failed']]
+            ], 500);
         }
     }
 
