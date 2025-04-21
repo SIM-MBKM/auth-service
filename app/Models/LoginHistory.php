@@ -9,7 +9,7 @@ class LoginHistory extends Model
 {
     use HasUuids;
 
-    protected $connection = 'auth';
+    protected $connection = 'auth_management';
     protected $table = 'login_histories';
 
     protected $primaryKey = 'id';

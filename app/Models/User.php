@@ -12,7 +12,7 @@ class User extends Model
 {
     use HasUuids;
 
-    protected $connection = 'auth';
+    protected $connection = 'auth_management';
     protected $table = 'users';
 
     protected $primaryKey = 'id';

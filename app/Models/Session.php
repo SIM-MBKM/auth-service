@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Session extends Model
 {
-    protected $connection = 'auth';
+    protected $connection = 'auth_management';
     protected $table = 'sessions';
 
     protected $primaryKey = 'id';

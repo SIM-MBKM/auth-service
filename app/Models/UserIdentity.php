@@ -9,7 +9,7 @@ class UserIdentity extends Model
 {
     use HasUuids;
 
-    protected $connection = 'auth';
+    protected $connection = 'auth_management';
     protected $table = 'user_identities';
 
     protected $primaryKey = 'id';
