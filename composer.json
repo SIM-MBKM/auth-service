@@ -14,7 +14,6 @@
         "firebase/php-jwt": "^6.11",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^11.0",
-        "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.12",
         "laravel/tinker": "^2.10.1",
         "php-amqplib/php-amqplib": "^3.7",
