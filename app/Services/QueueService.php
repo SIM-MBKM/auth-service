@@ -13,6 +13,7 @@ class QueueService
     protected $connection;
     protected $channel;
     protected $config;
+    protected $shouldCloseConnection = true;
 
     public function __construct()
     {
@@ -59,44 +60,8 @@ class QueueService
     public function publishUserEvent(string $eventType, array $payload): void
     {
         try {
-            Log::debug('Declaring exchange', [
-                'exchange' => 'user_events',
-                'type' => AMQPExchangeType::TOPIC
-            ]);
-
-            $this->channel->exchange_declare(
-                'user_events',
-                AMQPExchangeType::TOPIC,
-                false, // passive
-                true, // durable
-                false // auto_delete
-            );
-
-            $messageBody = json_encode([
-                'event_type' => $eventType,
-                'payload' => $payload,
-                'timestamp' => now()->toISOString()
-            ]);
-
-            $message = new AMQPMessage($messageBody, [
-                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-                'content_type' => 'application/json'
-            ]);
-
-            $routingKey = 'user.' . $eventType;
-
-            Log::debug('Publishing message', [
-                'exchange' => 'user_events',
-                'routing_key' => $routingKey,
-                'message' => $messageBody
-            ]);
-
-            $this->channel->basic_publish($message, 'user_events', $routingKey);
-
-            Log::info('Message published successfully', [
-                'event_type' => $eventType,
-                'payload_size' => strlen($messageBody)
-            ]);
+            $this->declareExchange();
+            $this->publishSingleMessage($eventType, $payload);
         } catch (Exception $e) {
             Log::error('Failed to publish message', [
                 'error' => $e->getMessage(),
@@ -104,8 +69,75 @@ class QueueService
             ]);
             throw $e;
         } finally {
+            if ($this->shouldCloseConnection) {
+                $this->safeShutdown();
+            }
+        }
+    }
+
+    public function publishUserEventsBatch(array $events): void
+    {
+        try {
+            $this->shouldCloseConnection = false;
+            $this->declareExchange();
+
+            foreach ($events as $event) {
+                $this->publishSingleMessage($event['type'], $event['payload']);
+            }
+        } catch (Exception $e) {
+            Log::error('Failed to publish batch messages', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        } finally {
             $this->safeShutdown();
         }
+    }
+
+    protected function declareExchange(): void
+    {
+        Log::debug('Declaring exchange', [
+            'exchange' => 'user_events',
+            'type' => AMQPExchangeType::TOPIC
+        ]);
+
+        $this->channel->exchange_declare(
+            'user_events',
+            AMQPExchangeType::TOPIC,
+            false, // passive
+            true, // durable
+            false // auto_delete
+        );
+    }
+
+    protected function publishSingleMessage(string $eventType, array $payload): void
+    {
+        $messageBody = json_encode([
+            'event_type' => $eventType,
+            'payload' => $payload,
+            'timestamp' => now()->toISOString()
+        ]);
+
+        $message = new AMQPMessage($messageBody, [
+            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+            'content_type' => 'application/json'
+        ]);
+
+        $routingKey = 'user.' . $eventType;
+
+        Log::debug('Publishing message', [
+            'exchange' => 'user_events',
+            'routing_key' => $routingKey,
+            'message' => $messageBody
+        ]);
+
+        $this->channel->basic_publish($message, 'user_events', $routingKey);
+
+        Log::info('Message published successfully', [
+            'event_type' => $eventType,
+            'payload_size' => strlen($messageBody)
+        ]);
     }
 
     protected function safeShutdown(): void
