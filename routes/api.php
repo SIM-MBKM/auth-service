@@ -7,6 +7,11 @@ use App\Controllers\AuthController;
 Route::get('/v1/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
 Route::get('/v1/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 
+// Social Authentication (SSO)
+Route::get('/v1/auth/its/redirect', [AuthController::class, 'redirectToSSO']);
+Route::get('/v1/auth/its/callback', [AuthController::class, 'handleSSOCallback']);
+Route::post('/v1/auth/its/logout', [AuthController::class, 'logoutSSO']);
+
 // API Key Management -- disabled, too much complexity
 // Route::post('/auth/access-keys', [AuthController::class, 'generateAPIKey']); // Bearer Token
 // Route::get('/auth/access-keys', [AuthController::class, 'listAPIKeys']); // X-API-Key

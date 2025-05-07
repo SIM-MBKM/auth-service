@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use App\Services\QueueService;
+use App\Services\SsoService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(QueueService::class, function ($app) {
             return new QueueService();
+        });
+        $this->app->singleton(SsoService::class, function ($app) {
+            return new SsoService();
         });
     }
 

@@ -5,27 +5,111 @@ namespace App\Controllers;
 use App\Repositories\UserRepository;
 use App\Services\AccessTokenService;
 use App\Services\SocialiteService;
+use App\Services\SsoService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 
 class AuthController
 {
     protected $accessTokenService;
-    protected $apiKeyService;
     protected $userRepository;
     protected $socialiteService;
+    protected $ssoService;
 
     public function __construct(
         AccessTokenService $accessTokenService,
         SocialiteService $socialiteService,
+        SsoService $ssoService,
         UserRepository $userRepository
     ) {
         $this->accessTokenService = $accessTokenService;
         $this->socialiteService = $socialiteService;
+        $this->ssoService = $ssoService;
         $this->userRepository = $userRepository;
+    }
+
+    /**
+     * Redirect to SSO
+     */
+    public function redirectToSSO()
+    {
+        try {
+            dd($this->ssoService->redirect());
+
+            return redirect()->back();
+        } catch (Exception $e) {
+            Log::error("SSO redirect error: {$e->getMessage()}");
+            return response()->json(['error' => 'SSO redirect failed'], 500);
+        }
+    }
+
+    /**
+     * Handle SSO callback
+     */
+    public function handleSSOCallback(Request $request)
+    {
+        try {
+            // Process the callback manually instead of relying on session
+            $ssoData = $this->ssoService->processCallback($request);
+
+            // Convert SSO user to a Socialite-compatible format
+            $socialUser = $this->ssoService->convertToSocialiteUser($ssoData['user'], $ssoData['access_token']);
+
+            // Use existing service to handle login logic
+            $user = $this->socialiteService->handleSocialLogin('sso', $socialUser);
+
+            $this->accessTokenService->logLogin($user->id, $request, 'sso', true);
+            $token = $this->accessTokenService->generateToken($user, $request);
+
+            // Store SSO token for logout purposes (optional)
+            session()->put('sso.id_token', $ssoData['id_token']);
+
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'user' => collect($user)->merge(['user_id' => $user->id])
+            ]);
+        } catch (\RuntimeException $e) {
+            $this->accessTokenService->logLogin(null, $request, 'sso', false, $e->getMessage());
+            Log::warning("SSO auth error: {$e->getMessage()}");
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            $this->accessTokenService->logLogin(null, $request, 'sso', false, $e->getMessage());
+            Log::error("SSO auth failed: {$e->getMessage()}");
+            return response()->json(['error' => 'Authentication failed'], 500);
+        }
+    }
+
+    /**
+     * Logout from SSO
+     */
+    public function logoutSSO(Request $request)
+    {
+        try {
+            // First handle regular logout
+            $token = $request->bearerToken();
+            if ($token) {
+                $this->accessTokenService->deleteToken($token);
+            }
+
+            // Get SSO token from session if available
+            $ssoToken = session()->get('sso.id_token');
+
+            // Log the user out from SSO
+            $this->ssoService->logout($ssoToken);
+
+            // Clear the session
+            session()->forget('sso');
+
+            return response()->json(['message' => 'Logged out']);
+        } catch (\Exception $e) {
+            Log::error("SSO logout error: {$e->getMessage()}");
+            return response()->json(['error' => 'Logout failed'], 500);
+        }
     }
 
     /**
