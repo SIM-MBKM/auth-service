@@ -38,7 +38,7 @@ class AuthController
     public function redirectToSSO()
     {
         try {
-            dd($this->ssoService->redirect());
+            $this->ssoService->redirect();
 
             return redirect()->back();
         } catch (Exception $e) {

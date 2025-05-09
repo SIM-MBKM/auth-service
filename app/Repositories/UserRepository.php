@@ -12,8 +12,7 @@ class UserRepository
         return User::create([
             'name' => $dto->name,
             'email' => $dto->email,
-            'sso_id' => $dto->sso_id,
-            'no_wa' => $dto->no_wa
+            'sso_id' => $dto->sso_id
         ]);
     }
 

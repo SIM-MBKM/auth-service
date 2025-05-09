@@ -108,6 +108,7 @@ class SocialiteService
 
             $this->queueService->publishUserEvent('created', [
                 'auth_user_id' => $user->id,
+                'email' => $user->email,
             ]);
 
             return $user;

@@ -31,7 +31,6 @@ class User extends Model
         'name',
         'email',
         'sso_id',
-        'no_wa',
     ];
 
     protected $hidden = [

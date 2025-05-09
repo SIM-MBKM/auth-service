@@ -54,7 +54,8 @@ class PublishAuthUsers extends Command
 
                 // Determine the appropriate role based on user ID
                 $payload = [
-                    'auth_user_id' => $user->id
+                    'auth_user_id' => $user->id,
+                    'email' => $user->email,
                 ];
 
                 // Add role_id to payload based on user

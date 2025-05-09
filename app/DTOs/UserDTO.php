@@ -10,8 +10,7 @@ class UserDTO
     public function __construct(
         public readonly string $name,
         public readonly string $email,
-        public readonly ?string $sso_id,
-        public readonly ?string $no_wa
+        public readonly ?string $sso_id
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -20,7 +19,6 @@ class UserDTO
             name: $request->validate(['name' => 'required|string|max:255'])['name'],
             email: $request->validate(['email' => 'required|email|unique:users,email'])['email'],
             sso_id: $request->validate(['sso_id' => 'nullable|string'])['sso_id'],
-            no_wa: $request->validate(['no_wa' => 'nullable|string|max:20'])['no_wa']
         );
     }
 
@@ -29,8 +27,7 @@ class UserDTO
         return new self(
             name: $user->getName(),
             email: $user->getEmail(),
-            sso_id: $user->getId(),
-            no_wa: null
+            sso_id: $user->getId()
         );
     }
 }
