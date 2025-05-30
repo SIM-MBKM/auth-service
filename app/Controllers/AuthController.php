@@ -69,11 +69,25 @@ class AuthController
             // Store SSO token for logout purposes (optional)
             session()->put('sso.id_token', $ssoData['id_token']);
 
-            return response()->json([
+            $frontendUrl = config('app.frontend_url');
+            $redirectUrl = $frontendUrl . '/auth/callback?' . http_build_query([
                 'access_token' => $token,
-                'token_type' => 'bearer',
-                'user' => collect($user)->merge(['user_id' => $user->id])
+                'user' => base64_encode(json_encode([
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ])),
+                'success' => true
             ]);
+
+            // If needed for Backend Testing
+            // return response()->json([
+            //     'access_token' => $token,
+            //     'token_type' => 'bearer',
+            //     'user' => collect($user)->merge(['user_id' => $user->id])
+            // ]);
+
+            return redirect()->away($redirectUrl);
         } catch (\RuntimeException $e) {
             $this->accessTokenService->logLogin(null, $request, 'sso', false, $e->getMessage());
             Log::warning("SSO auth error: {$e->getMessage()}");
@@ -133,11 +147,24 @@ class AuthController
             $this->accessTokenService->logLogin($user->id, $request, 'google', true);
             $token = $this->accessTokenService->generateToken($user, $request);
 
-            return response()->json([
+            $frontendUrl = config('app.frontend_url');
+            $redirectUrl = $frontendUrl . '/auth/callback?' . http_build_query([
                 'access_token' => $token,
-                'token_type' => 'bearer',
-                'user' => collect($user)->merge(['user_id' => $user->id])
+                'user' => base64_encode(json_encode([
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ])),
+                'success' => true
             ]);
+            // If needed for Backend Testing
+            // return response()->json([
+            //     'access_token' => $token,
+            //     'token_type' => 'bearer',
+            //     'user' => collect($user)->merge(['user_id' => $user->id])
+            // ]);
+
+            return redirect()->away($redirectUrl);
         } catch (\RuntimeException $e) {
             $this->accessTokenService->logLogin(null, $request, 'google', false, $e->getMessage());
             Log::warning("Google auth error: {$e->getMessage()}");
@@ -288,9 +315,10 @@ class AuthController
             $dto = IdentityCheckDTO::fromEmail($email);
 
             $responseDto = $this->socialiteService->checkEmailIdentity($dto);
-            
+
             return response()->json($responseDto);
         } catch (Exception $e) {
+            Log::error("Identity Check error: {$e->getMessage()}");
             return response()->json(['error' => 'Identity Check Failed'], 500);
         }
     }

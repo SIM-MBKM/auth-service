@@ -123,4 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend Redirects
+    |--------------------------------------------------------------------------
+    |
+    | This array contains frontend redirects that will be applied to the
+    | application. Each redirect is defined by a key-value pair where the
+    | key is the path to redirect from and the value is the path to redirect
+    | to. This is useful for managing legacy URLs or custom routing.
+    |
+    */
+
+    'frontend_url' => env('APP_FRONTEND_URL', 'http://localhost:3000'),
 ];

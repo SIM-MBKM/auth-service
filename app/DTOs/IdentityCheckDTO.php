@@ -8,8 +8,7 @@ class IdentityCheckDTO
 {
     public function __construct(
         public readonly string $email
-    ) {
-    }
+    ) {}
 
     public static function fromEmail(string $email): self
     {
@@ -55,9 +54,15 @@ class IdentityCheckDTO
 
         $domain = $emailParts[1];
         $allowedDomains = config('emaildomain.allowed', []);
-        
+
         if (!in_array($domain, $allowedDomains)) {
             throw new InvalidArgumentException('Email domain not allowed');
+        }
+
+        if ($domain === 'student.its.ac.id' && $emailParts[0]) {
+            if (!preg_match('/^5017\d{6}$/', $emailParts[0])) {
+                throw new InvalidArgumentException('Student is not from allowed department.');
+            }
         }
 
         return new self(email: $decodedEmail);
