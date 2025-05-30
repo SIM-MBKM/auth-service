@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\DTOs\IdentityCheckDTO;
+use App\DTOs\IdentityCheckResponseDTO;
 use App\DTOs\UserDTO;
 use App\Models\User;
 use App\Repositories\UserIdentityRepository;
@@ -53,6 +55,41 @@ class SocialiteService
             ]);
             throw new RuntimeException('Social authentication failed', 401, $e);
         }
+    }
+
+    public function checkEmailIdentity(IdentityCheckDTO $dto): IdentityCheckResponseDTO
+    {
+        try {
+            // Check if user exists
+            $user = $this->userRepository->findByEmail($dto->email);
+            $userExists = $user !== null;
+
+            // Determine provider based on email domain
+            $provider = $this->getProviderByEmail($dto->email);
+
+            return new IdentityCheckResponseDTO(
+                email: $dto->email,
+                userExists: $userExists,
+                provider: $provider
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Email identity check failed: ' . $e->getMessage(), [
+                'email' => $dto->email,
+                'error' => $e
+            ]);
+            throw new RuntimeException('Identity check failed', 500, $e);
+        }
+    }
+
+    private function getProviderByEmail(string $email): string
+    {
+        $domain = explode('@', $email)[1];
+        
+        // ITS domains use microsoft, others use google
+        return in_array($domain, ['its.ac.id', 'student.its.ac.id', 'geofisika.its.ac.id']) 
+            ? 'sso' 
+            : 'google';
     }
 
     // public function handleSocialLogin(string $provider, SocialiteUser $socialUser): User

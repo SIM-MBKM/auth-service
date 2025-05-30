@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\DTOs\IdentityCheckDTO;
 use App\Repositories\UserRepository;
 use App\Services\AccessTokenService;
 use App\Services\SocialiteService;
@@ -278,6 +279,19 @@ class AuthController
             $this->accessTokenService->logLogin(null, $request, 'refresh_token', false, $e->getMessage());
             Log::error("Refresh error: {$e->getMessage()}");
             return response()->json(['error' => 'Token refresh failed'], 500);
+        }
+    }
+
+    public function identityProviderCheck($email)
+    {
+        try {
+            $dto = IdentityCheckDTO::fromEmail($email);
+
+            $responseDto = $this->socialiteService->checkEmailIdentity($dto);
+            
+            return response()->json($responseDto);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Identity Check Failed'], 500);
         }
     }
 }

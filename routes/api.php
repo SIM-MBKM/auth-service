@@ -26,3 +26,6 @@ Route::post('/v1/auth/validate-token', [AuthController::class, 'validateToken'])
 
 // Get current user details
 Route::get('/v1/auth/user', [AuthController::class, 'getUser']);
+
+// Check Identity Provider
+Route::get('/v1/auth/identity/{email}', [AuthController::class, 'identityProviderCheck'])->where('email', '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}');
