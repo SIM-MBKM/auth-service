@@ -5,7 +5,7 @@ services:
       context: .          # ← Build context = root directory (bukan ./php)
       dockerfile: ./php/Dockerfile  # ← Path ke Dockerfile
     image: php:latest
-    container_name: user-service
+    container_name: auth-service
     hostname: "php"
     volumes:
       - .:/var/www/html 
