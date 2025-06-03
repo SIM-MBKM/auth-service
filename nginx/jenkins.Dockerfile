@@ -17,7 +17,7 @@ COPY public/ /var/www/html/public/
 COPY routes/ /var/www/html/routes/
 COPY storage/ /var/www/html/storage/
 COPY tests/ /var/www/html/tests/
-COPY scripts/ /var/www/html/scripts/
+# COPY scripts/ /var/www/html/scripts/
 
 # ✅ COPY root files
 COPY artisan /var/www/html/artisan

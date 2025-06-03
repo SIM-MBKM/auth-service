@@ -54,7 +54,7 @@ COPY public/ ./public/
 COPY routes/ ./routes/
 COPY storage/ ./storage/
 COPY tests/ ./tests/
-COPY scripts/ ./scripts/
+# COPY scripts/ ./scripts/
 
 # ✅ COPY individual files one by one (correct syntax)
 COPY artisan ./
