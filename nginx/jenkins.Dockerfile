@@ -1,10 +1,12 @@
-FROM nginx:stable-alpine
+FROM nginx:1.28-alpine
 
 ENV TZ="Asia/Jakarta"
 ENV PS1="\u@\h:\w\\$ "
 
-RUN apk add --no-cache bash tzdata
-
+RUN apk update --no-cache && \
+    apk upgrade --no-cache && \
+    apk add --no-cache --allow-untrusted bash tzdata
+    
 # ✅ Copy nginx configuration
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 
