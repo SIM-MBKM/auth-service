@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./php/jenkins.Dockerfile
+    image: php:latest
+    container_name: auth-service
+    hostname: "php"
+    # volumes:
+    #   - ${PWD:-$(pwd)}:/var/www/html  # ✅ Use absolute path
+    working_dir: /var/www/html
+    networks:
+      - microservices-db-dev
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+
+  nginx_laravel:
+    build:
+      context: .  # ← Root directory (consistent)
+      dockerfile: ./nginx/jenkins.Dockerfile
+    image: nginx:latest
+    container_name: nginx-auth-service
+    hostname: "nginx"
+    ports:
+      - "8090:80"
+    # volumes:
+    #   - ${PWD:-$(pwd)}:/var/www/html  # ✅ Use absolute path
+    depends_on:
+      - app
+    networks:
+      - microservices-db-dev
+networks:
+  microservices-db-dev:  # Simplified network definition
+    name: microservices_dev_microservices-db-dev
+    external: true
