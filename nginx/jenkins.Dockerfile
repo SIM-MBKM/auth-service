@@ -1,4 +1,4 @@
-FROM nginx:1.28-alpine
+FROM nginx:stable-alpine
 
 ENV TZ="Asia/Jakarta"
 ENV PS1="\u@\h:\w\\$ "
