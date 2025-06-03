@@ -29,7 +29,7 @@ COPY vite.config.js /var/www/html/vite.config.js
 COPY package.json /var/www/html/package.json
 COPY package-lock.json /var/www/html/package-lock.json
 COPY README.md /var/www/html/README.md
-COPY test_consumer.php /var/www/html/test_consumer.php
+# COPY test_consumer.php /var/www/html/test_consumer.php
 
 # ✅ COPY config files
 COPY .editorconfig /var/www/html/.editorconfig

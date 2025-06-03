@@ -66,7 +66,7 @@ COPY vite.config.js ./
 COPY package.json ./
 COPY package-lock.json ./
 COPY README.md ./
-COPY test_consumer.php ./
+# COPY test_consumer.php ./
 COPY .editorconfig ./
 COPY .gitattributes ./
 COPY .gitignore ./
