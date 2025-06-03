@@ -50,7 +50,7 @@ COPY app/ ./app/
 COPY bootstrap/ ./bootstrap/
 COPY config/ ./config/
 COPY public/ ./public/
-COPY resources/ ./resources/
+# COPY resources/ ./resources/
 COPY routes/ ./routes/
 COPY storage/ ./storage/
 COPY tests/ ./tests/

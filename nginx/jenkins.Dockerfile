@@ -13,7 +13,7 @@ COPY app/ /var/www/html/app/
 COPY bootstrap/ /var/www/html/bootstrap/
 COPY config/ /var/www/html/config/
 COPY public/ /var/www/html/public/
-COPY resources/ /var/www/html/resources/
+# COPY resources/ /var/www/html/resources/
 COPY routes/ /var/www/html/routes/
 COPY storage/ /var/www/html/storage/
 COPY tests/ /var/www/html/tests/
