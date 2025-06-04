@@ -15,8 +15,8 @@ services:
       - nginx-auth-service-network
       - microservices-db-dev
     environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
+      - APP_ENV=development
+      - APP_DEBUG=true
 
   nginx_laravel:
     build:
