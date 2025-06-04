@@ -6,10 +6,13 @@ services:
     image: php:latest
     container_name: auth-service
     hostname: "php"
+    ports:
+      - "9002:9002"  # Expose port 9000 for PHP-FPM
     # volumes:
     #   - ${PWD:-$(pwd)}:/var/www/html  # ✅ Use absolute path
     working_dir: /var/www/html
     networks:
+      - nginx-auth-service-network
       - microservices-db-dev
     environment:
       - APP_ENV=production
@@ -29,8 +32,12 @@ services:
     depends_on:
       - app
     networks:
+      - nginx-auth-service-network
       - microservices-db-dev
+
 networks:
+  nginx-auth-service-network:
+    driver: bridge
   microservices-db-dev:  # Simplified network definition
     name: microservices_dev_microservices-db-dev
     external: true
