@@ -13,6 +13,7 @@ services:
     working_dir: /var/www/html
     networks:
       - nginx-auth-service-network
+      - rabbitmq-network
       - microservices-db-dev
     env_file:
       - .env
@@ -35,6 +36,7 @@ services:
       - app
     networks:
       - nginx-auth-service-network
+      - rabbitmq-network
       - microservices-db-dev
 
 networks:
@@ -43,3 +45,6 @@ networks:
   microservices-db-dev:  # Simplified network definition
     name: microservices_dev_microservices-db-dev
     external: true
+  rabbitmq-network:
+    name: rabbitmq_rabbitmq-network
+    external: true  
