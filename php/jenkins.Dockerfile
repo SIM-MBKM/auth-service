@@ -88,5 +88,5 @@ COPY ./php/docker-entrypoint-jenkins.sh /usr/local/bin/docker-entrypoint-jenkins
 RUN chmod +x /usr/local/bin/docker-entrypoint-jenkins.sh
 
 ENTRYPOINT ["docker-entrypoint-jenkins.sh"]
-EXPOSE 9000
+EXPOSE 9002
 CMD ["php-fpm"]

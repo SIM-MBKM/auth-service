@@ -157,5 +157,5 @@ RUN ln -s /usr/local/bin/docker-entrypoint.sh /
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-EXPOSE 9000
+EXPOSE 9002
 CMD ["php-fpm"]
