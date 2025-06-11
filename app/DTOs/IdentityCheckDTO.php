@@ -60,7 +60,7 @@ class IdentityCheckDTO
         }
 
         if ($domain === 'student.its.ac.id' && $emailParts[0]) {
-            if (!preg_match('/^5017\d{6}$/', $emailParts[0])) {
+            if (!preg_match('/^5017|5025\d{6}$/', $emailParts[0])) {
                 throw new InvalidArgumentException('Student is not from allowed department.');
             }
         }
